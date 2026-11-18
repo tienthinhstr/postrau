@@ -1,0 +1,10 @@
+{
+  "name": "Vựa Rau Xanh POS — Quản Lý Bán Hàng & In Hóa Đơn Cầm Tay",
+  "description": "Ứng dụng quản lý bán hàng cho vựa rau củ quả: xuất hóa đơn đa đơn vị (Kg, Bó, Bịch, Giỏ), tự động tính tiền, theo dõi công nợ thanh toán, báo cáo doanh thu thời gian thực và in hóa đơn máy in nhiệt cầm tay 58mm/80mm.",
+  "requestFramePermissions": [
+    "bluetooth"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

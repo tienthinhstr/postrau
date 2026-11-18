@@ -1,0 +1,407 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Staff or owner account profile with role-based permissions for the vegetable depot.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified Google email address",
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the staff member or owner",
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "description": "Assigned role in the depot: admin (Chủ vựa), cashier (Thu ngân), sales (Nhân viên ghi đơn)",
+          "enum": ["admin", "cashier", "sales"]
+        },
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier for query enforcement",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the profile was last updated"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "workspaceId", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted marker document granting admin privileges to a specific user UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Target admin user UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email address",
+          "maxLength": 160
+        },
+        "grantedBy": {
+          "type": "string",
+          "description": "UID of the admin who granted access",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of admin grant"
+        }
+      },
+      "required": ["uid", "email", "grantedBy", "createdAt"]
+    },
+    "InvoiceDoc": {
+      "title": "InvoiceDoc",
+      "description": "Wholesale/retail vegetable sales invoice synced in real time across devices.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Invoice document ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "workspaceId": {
+          "type": "string",
+          "description": "Depot workspace identifier",
+          "maxLength": 64
+        },
+        "code": {
+          "type": "string",
+          "description": "Human-readable invoice code (e.g. HD-1111-001)",
+          "maxLength": 40
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO timestamp string for daily revenue grouping",
+          "maxLength": 40
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Normalized customer identifier",
+          "maxLength": 120
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Buyer full name or stall name",
+          "maxLength": 120
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Buyer phone number",
+          "maxLength": 40
+        },
+        "customerAddress": {
+          "type": "string",
+          "description": "Buyer address or market stall info",
+          "maxLength": 200
+        },
+        "customerType": {
+          "type": "string",
+          "enum": ["moi_si", "khach_le"]
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded list of up to 50 vegetable line items"
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Subtotal in VND"
+        },
+        "discountAmount": {
+          "type": "number",
+          "description": "Discount amount in VND"
+        },
+        "crateDepositAmount": {
+          "type": "number",
+          "description": "Crate deposit amount in VND"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount in VND"
+        },
+        "paidAmount": {
+          "type": "number",
+          "description": "Collected amount in VND"
+        },
+        "remainingAmount": {
+          "type": "number",
+          "description": "Remaining unpaid balance in VND"
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["paid", "partial", "unpaid"]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["cash", "transfer", "mixed"]
+        },
+        "payments": {
+          "type": "array",
+          "description": "Bounded list of up to 50 payment settlement records"
+        },
+        "printedCount": {
+          "type": "number",
+          "description": "Number of times the invoice was printed/exported"
+        },
+        "createdByUid": {
+          "type": "string",
+          "description": "UID of the staff user who created the invoice",
+          "maxLength": 128
+        },
+        "createdByName": {
+          "type": "string",
+          "description": "Display name of the creator",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore update timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "workspaceId",
+        "code",
+        "createdAtIso",
+        "customerId",
+        "customerName",
+        "customerPhone",
+        "customerAddress",
+        "customerType",
+        "items",
+        "subtotal",
+        "discountAmount",
+        "crateDepositAmount",
+        "totalAmount",
+        "paidAmount",
+        "remainingAmount",
+        "paymentStatus",
+        "paymentMethod",
+        "payments",
+        "printedCount",
+        "createdByUid",
+        "createdByName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StoreSettingsDoc": {
+      "title": "StoreSettingsDoc",
+      "description": "Shared depot information printed on all Hóa Đơn Bán Lẻ sheets.",
+      "type": "object",
+      "properties": {
+        "storeName": {
+          "type": "string",
+          "description": "Name of the vegetable depot",
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "description": "Depot phone number",
+          "maxLength": 60
+        },
+        "address": {
+          "type": "string",
+          "description": "Depot address",
+          "maxLength": 200
+        },
+        "bankName": {
+          "type": "string",
+          "description": "Bank name for transfers",
+          "maxLength": 80
+        },
+        "bankAccountNo": {
+          "type": "string",
+          "description": "Bank account number",
+          "maxLength": 50
+        },
+        "bankAccountName": {
+          "type": "string",
+          "description": "Bank account holder name",
+          "maxLength": 100
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "UID of user who updated settings",
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of update"
+        }
+      },
+      "required": [
+        "storeName",
+        "phone",
+        "address",
+        "bankName",
+        "bankAccountNo",
+        "bankAccountName",
+        "updatedByUid",
+        "updatedAt"
+      ]
+    },
+    "CustomerDoc": {
+      "title": "CustomerDoc",
+      "description": "Wholesale/retail customer directory profile with initial debt and settlement records.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Customer document ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "workspaceId": {
+          "type": "string",
+          "description": "Depot workspace identifier",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer full name or stall name",
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "description": "Customer phone number",
+          "maxLength": 40
+        },
+        "stallOrAddress": {
+          "type": "string",
+          "description": "Market stall or delivery address",
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "enum": ["moi_si", "nha_hang", "khach_le"]
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional customer note",
+          "maxLength": 300
+        },
+        "initialDebt": {
+          "type": "number",
+          "description": "Initial opening debt balance in VND"
+        },
+        "debtPayments": {
+          "type": "array",
+          "description": "Bounded list of up to 50 debt payment records"
+        },
+        "createdByUid": {
+          "type": "string",
+          "description": "UID of creator",
+          "maxLength": 128
+        },
+        "createdByName": {
+          "type": "string",
+          "description": "Display name of creator",
+          "maxLength": 100
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "UID of last updater",
+          "maxLength": 128
+        },
+        "updatedByName": {
+          "type": "string",
+          "description": "Display name of last updater",
+          "maxLength": 100
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO creation timestamp string",
+          "maxLength": 40
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "description": "ISO update timestamp string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore update timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "workspaceId",
+        "name",
+        "phone",
+        "stallOrAddress",
+        "type",
+        "note",
+        "initialDebt",
+        "debtPayments",
+        "createdByUid",
+        "createdByName",
+        "createdAtIso",
+        "updatedAtIso",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Staff and admin user profiles with role permissions."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted admin registry for role-based access control."
+    },
+    "/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/InvoiceDoc" },
+      "description": "Real-time wholesale and retail vegetable invoices."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/StoreSettingsDoc" },
+      "description": "Depot configuration printed on A5 invoices."
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/CustomerDoc" },
+      "description": "Customer directory and debt ledger synced in real time."
+    }
+  }
+}

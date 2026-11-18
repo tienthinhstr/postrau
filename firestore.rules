@@ -1,0 +1,313 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'tienthinhstr@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function hasRole(allowedRoles) {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in allowedRoles
+      );
+    }
+
+    // Validation Blueprints (Pillar 2: Anti-Update-Gap)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'role', 'workspaceId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'role', 'workspaceId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_-]+$') &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.role is string && data.role in ['admin', 'cashier', 'sales'] &&
+        data.workspaceId is string && data.workspaceId == 'vua-rau-thanh-dat' && data.workspaceId.size() <= 64 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'grantedBy', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'grantedBy', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_-]+$') &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.grantedBy is string && data.grantedBy.size() >= 1 && data.grantedBy.size() <= 128 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidInvoiceDoc(data) {
+      return data.keys().hasAll([
+          'id', 'workspaceId', 'code', 'createdAtIso', 'customerId', 'customerName',
+          'customerPhone', 'customerAddress', 'customerType', 'items', 'subtotal',
+          'discountAmount', 'crateDepositAmount', 'totalAmount', 'paidAmount',
+          'remainingAmount', 'paymentStatus', 'paymentMethod', 'payments',
+          'printedCount', 'createdByUid', 'createdByName', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspaceId', 'code', 'createdAtIso', 'customerId', 'customerName',
+          'customerPhone', 'customerAddress', 'customerType', 'items', 'subtotal',
+          'discountAmount', 'crateDepositAmount', 'totalAmount', 'paidAmount',
+          'remainingAmount', 'paymentStatus', 'paymentMethod', 'payments',
+          'printedCount', 'createdByUid', 'createdByName', 'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_-]+$') &&
+        data.workspaceId is string && data.workspaceId == 'vua-rau-thanh-dat' && data.workspaceId.size() <= 64 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 40 &&
+        data.createdAtIso is string && data.createdAtIso.size() >= 10 && data.createdAtIso.size() <= 40 &&
+        data.customerId is string && data.customerId.size() >= 1 && data.customerId.size() <= 120 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+        data.customerPhone is string && data.customerPhone.size() <= 40 &&
+        data.customerAddress is string && data.customerAddress.size() <= 200 &&
+        data.customerType is string && data.customerType in ['moi_si', 'khach_le'] &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 50 && data.items[0] is map &&
+        data.subtotal is number && data.subtotal >= 0 &&
+        data.discountAmount is number && data.discountAmount >= 0 &&
+        data.crateDepositAmount is number && data.crateDepositAmount >= 0 &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.paidAmount is number && data.paidAmount >= 0 && data.paidAmount <= data.totalAmount &&
+        data.remainingAmount is number && data.remainingAmount >= 0 && data.remainingAmount <= data.totalAmount &&
+        data.paymentStatus is string && data.paymentStatus in ['paid', 'partial', 'unpaid'] &&
+        data.paymentMethod is string && data.paymentMethod in ['cash', 'transfer', 'mixed'] &&
+        data.payments is list && data.payments.size() <= 50 && (data.payments.size() == 0 || data.payments[0] is map) &&
+        data.printedCount is number && data.printedCount >= 0 &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdByName is string && data.createdByName.size() >= 1 && data.createdByName.size() <= 100 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStoreSettingsDoc(data) {
+      return data.keys().hasAll([
+          'storeName', 'phone', 'address', 'bankName', 'bankAccountNo',
+          'bankAccountName', 'updatedByUid', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'storeName', 'phone', 'address', 'bankName', 'bankAccountNo',
+          'bankAccountName', 'updatedByUid', 'updatedAt'
+        ]) &&
+        data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 120 &&
+        data.phone is string && data.phone.size() <= 60 &&
+        data.address is string && data.address.size() <= 200 &&
+        data.bankName is string && data.bankName.size() <= 80 &&
+        data.bankAccountNo is string && data.bankAccountNo.size() <= 50 &&
+        data.bankAccountName is string && data.bankAccountName.size() <= 100 &&
+        data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCustomerDoc(data) {
+      return data.keys().hasAll([
+          'id', 'workspaceId', 'name', 'phone', 'stallOrAddress', 'type',
+          'note', 'initialDebt', 'debtPayments', 'createdByUid', 'createdByName',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspaceId', 'name', 'phone', 'stallOrAddress', 'type',
+          'note', 'initialDebt', 'debtPayments', 'createdByUid', 'createdByName',
+          'updatedByUid', 'updatedByName', 'createdAtIso', 'updatedAtIso',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_-]+$') &&
+        data.workspaceId is string && data.workspaceId == 'vua-rau-thanh-dat' && data.workspaceId.size() <= 64 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.phone is string && data.phone.size() <= 40 &&
+        data.stallOrAddress is string && data.stallOrAddress.size() <= 200 &&
+        data.type is string && data.type in ['moi_si', 'nha_hang', 'khach_le'] &&
+        data.note is string && data.note.size() <= 300 &&
+        data.initialDebt is number && data.initialDebt >= 0 &&
+        data.debtPayments is list && data.debtPayments.size() <= 50 && (data.debtPayments.size() == 0 || data.debtPayments[0] is map) &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdByName is string && data.createdByName.size() >= 1 && data.createdByName.size() <= 100 &&
+        (!('updatedByUid' in data) || (data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128)) &&
+        (!('updatedByName' in data) || (data.updatedByName is string && data.updatedByName.size() >= 1 && data.updatedByName.size() <= 100)) &&
+        data.createdAtIso is string && data.createdAtIso.size() >= 10 && data.createdAtIso.size() <= 40 &&
+        data.updatedAtIso is string && data.updatedAtIso.size() >= 10 && data.updatedAtIso.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 1. User Profiles Collection (/users/{userId})
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && existing().workspaceId == 'vua-rau-thanh-dat' && (
+        existing().uid == request.auth.uid || isBootstrappedAdmin()
+      );
+      allow create: if isSignedIn() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (request.auth.uid == userId && (
+            incoming().role in ['cashier', 'sales'] || isAdmin()
+          )) ||
+          isAdmin()
+        );
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().workspaceId == existing().workspaceId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Owner updates own profile without unauthorized role escalation
+          (request.auth.uid == userId &&
+            (incoming().role == existing().role || isAdmin()) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'email', 'role', 'updatedAt'
+            ])) ||
+          // Action 2: Admin updates role or displayName
+          (isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'role', 'displayName', 'email', 'updatedAt'
+            ]))
+        );
+      allow delete: if isSignedIn() && isValidId(userId) && isAdmin();
+    }
+
+    // 2. Trusted Admins Registry (/admins/{adminUid})
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isBootstrappedAdmin() && existing().uid is string;
+      allow create: if isSignedIn() &&
+        isValidId(adminUid) &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == adminUid &&
+        incoming().grantedBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+      allow update: if isSignedIn() &&
+        isValidId(adminUid) &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'grantedBy', 'createdAt']) &&
+        isAdmin();
+      allow delete: if isSignedIn() && isValidId(adminUid) && isAdmin();
+    }
+
+    // 3. Real-Time Invoices Collection (/invoices/{invoiceId})
+    match /invoices/{invoiceId} {
+      allow get: if isSignedIn() && isValidId(invoiceId) && (
+        resource == null || existing().workspaceId == 'vua-rau-thanh-dat'
+      );
+      allow list: if isSignedIn() && existing().workspaceId == 'vua-rau-thanh-dat';
+      allow create: if isSignedIn() &&
+        isValidId(invoiceId) &&
+        isValidInvoiceDoc(incoming()) &&
+        incoming().id == invoiceId &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        hasRole(['admin', 'cashier', 'sales']);
+      allow update: if isSignedIn() &&
+        isValidId(invoiceId) &&
+        isValidInvoiceDoc(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().workspaceId == existing().workspaceId &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Increment printedCount when printing/exporting A5 invoice
+          (hasRole(['admin', 'cashier', 'sales']) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'printedCount', 'updatedAt'
+            ])) ||
+          // Action 2: Settle or toggle payment status (Admin & Cashier)
+          (hasRole(['admin', 'cashier']) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'paidAmount', 'remainingAmount', 'paymentStatus', 'paymentMethod', 'payments',
+              'printedCount', 'updatedAt'
+            ])) ||
+          // Action 3: Full sync or admin override
+          isAdmin()
+        );
+      allow delete: if isSignedIn() && isValidId(invoiceId) && hasRole(['admin', 'cashier']);
+    }
+
+    // 4. Shared Depot Settings (/settings/{settingId})
+    match /settings/{settingId} {
+      allow get: if isSignedIn() && isValidId(settingId);
+      allow create: if isSignedIn() &&
+        isValidId(settingId) &&
+        isValidStoreSettingsDoc(incoming()) &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().updatedAt == request.time &&
+        hasRole(['admin', 'cashier']);
+      allow update: if isSignedIn() &&
+        isValidId(settingId) &&
+        isValidStoreSettingsDoc(incoming()) &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'storeName', 'phone', 'address', 'bankName', 'bankAccountNo',
+          'bankAccountName', 'updatedByUid', 'updatedAt'
+        ]) &&
+        hasRole(['admin', 'cashier']);
+      allow delete: if isSignedIn() && isValidId(settingId) && isAdmin();
+    }
+
+    // 5. Registered Customers Collection (/customers/{customerId})
+    match /customers/{customerId} {
+      allow get: if isSignedIn() && isValidId(customerId) && (
+        resource == null || existing().workspaceId == 'vua-rau-thanh-dat'
+      );
+      allow list: if isSignedIn() && existing().workspaceId == 'vua-rau-thanh-dat';
+      allow create: if isSignedIn() &&
+        isValidId(customerId) &&
+        isValidCustomerDoc(incoming()) &&
+        incoming().id == customerId &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        hasRole(['admin', 'cashier', 'sales']);
+      allow update: if isSignedIn() &&
+        isValidId(customerId) &&
+        isValidCustomerDoc(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().workspaceId == existing().workspaceId &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        hasRole(['admin', 'cashier', 'sales']) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'phone', 'stallOrAddress', 'type', 'note', 'initialDebt',
+          'debtPayments', 'updatedByUid', 'updatedByName', 'updatedAtIso', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(customerId) && hasRole(['admin', 'cashier']);
+    }
+  }
+}
